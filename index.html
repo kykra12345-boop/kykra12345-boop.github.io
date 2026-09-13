@@ -3,67 +3,99 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>VK ID Àâòîðèçàöèÿ</title>
+  <title>VK ID Авторизация</title>
 </head>
 
 <body>
 
   <div id="vk-auth"></div>
 
-  <script src="https://cdn.jsdelivr.net/npm/@vkid/sdk@2.6.8/dist-sdk/umd/index.js"></script>
+  <script src="https://unpkg.com/@vkid/sdk@2.6.8/dist-sdk/umd/index.js"></script>
 
   <script>
-    if ('VKIDSDK' in window) {
+    if (!('VKIDSDK' in window)) {
+      document.body.innerHTML = `
+        <h2>❌ VK ID SDK не загрузился</h2>
+        <p>Проверь подключение к интернету или блокировщик.</p>
+      `;
+    } else {
 
       const VKID = window.VKIDSDK;
 
+      /*
+       * ВАЖНО:
+       * Эти значения нужны VK ID для OAuth 2.1 / PKCE.
+       */
+      const state = crypto.randomUUID();
+
+      const codeVerifier =
+        crypto.randomUUID() +
+        crypto.randomUUID() +
+        crypto.randomUUID();
+
+      /*
+       * Инициализация VK ID.
+       */
       VKID.Config.init({
         app: 54769424,
         redirectUrl: 'https://kykra12345-boop.github.io/',
-        responseMode: VKID.ConfigResponseMode.Callback,
-        source: VKID.ConfigSource.LOWCODE,
+        state: state,
+        codeVerifier: codeVerifier,
         scope: 'wall groups',
       });
 
+      /*
+       * Кнопка OneTap.
+       */
       const oneTap = new VKID.OneTap();
 
-      oneTap.render({
-        container: document.getElementById('vk-auth'),
-        showAlternativeLogin: true
-      })
+      oneTap
+        .render({
+          container: document.getElementById('vk-auth'),
+          showAlternativeLogin: true
+        })
 
-      .on(
-        VKID.WidgetEvents.ERROR,
-        vkidOnError
-      )
+        .on(
+          VKID.WidgetEvents.ERROR,
+          vkidOnError
+        )
 
-      .on(
-        VKID.OneTapInternalEvents.LOGIN_SUCCESS,
-        function (payload) {
+        .on(
+          VKID.OneTapInternalEvents.LOGIN_SUCCESS,
+          function (payload) {
 
-          const code = payload.code;
-          const deviceId = payload.device_id;
+            const code = payload.code;
+            const deviceId = payload.device_id;
 
-          console.log('VK ID: ïîëó÷åí code');
-          console.log('VK ID: ïîëó÷åí device_id');
+            console.log('VK ID: получен authorization code');
+            console.log('VK ID: получен device_id');
 
-          VKID.Auth.exchangeCode(code, deviceId)
+            /*
+             * Обмениваем code на access_token.
+             * SDK использует сохранённый codeVerifier.
+             */
+            VKID.Auth.exchangeCode(code, deviceId)
+              .then(vkidOnSuccess)
+              .catch(vkidOnError);
+          }
+        );
 
-            .then(vkidOnSuccess)
-
-            .catch(vkidOnError);
-        }
-      );
-
+      /*
+       * Успешная авторизация.
+       */
       async function vkidOnSuccess(data) {
 
-        console.log('VK ID: îáìåí code âûïîëíåí óñïåøíî');
+        console.log('VK ID: exchangeCode выполнен успешно');
+        console.log('VK ID: User ID:', data.user_id);
 
+        /*
+         * Проверяем, что access_token действительно пришёл.
+         */
         if (!data || !data.access_token) {
 
           document.body.innerHTML = `
-            <h2>Îøèáêà ?</h2>
-            <p>VK ID íå âåðíóë access_token.</p>
+            <h2>❌ VK ID не вернул access_token</h2>
+            <p>Открой Console (Ctrl+Shift+J) для подробностей.</p>
           `;
 
           console.error('VK AUTH RESULT:', data);
@@ -71,6 +103,11 @@
           return;
         }
 
+        /*
+         * Отправляем токен нашему локальному server.js.
+         *
+         * Сам токен на странице НЕ показываем.
+         */
         try {
 
           const response = await fetch(
@@ -93,74 +130,85 @@
 
           const result = await response.json();
 
+          /*
+           * Проверяем, принял ли токен server.js.
+           */
           if (!response.ok || !result.success) {
-
             throw new Error(
-              result.message || 'server.js íå ïðèíÿë òîêåí'
+              result.message || 'server.js не принял токен'
             );
           }
 
+          /*
+           * Всё успешно.
+           */
           document.body.innerHTML = `
-            <h2>? VK àâòîðèçàöèÿ óñïåøíà</h2>
-            <p>
-              Òîêåí ïåðåäàí àâòîïîñòåðó.
-            </p>
-            <p>
-              User ID: ${result.user_id || 'íå óêàçàí'}
-            </p>
-            <p>
-              Òåïåðü ýòó âêëàäêó ìîæíî çàêðûòü.
-            </p>
+            <h2>✅ Авторизация успешна</h2>
+            <p>VK ID авторизовал аккаунт.</p>
+            <p>Токен автоматически передан автопостеру.</p>
+            <p>User ID: ${result.user_id || 'не указан'}</p>
+            <p>Теперь эту вкладку можно закрыть.</p>
           `;
 
           console.log(
-            '? VK òîêåí óñïåøíî ïåðåäàí â server.js'
+            '✅ VK token успешно передан в server.js'
           );
 
         } catch (error) {
 
+          /*
+           * VK авторизация прошла,
+           * но локальный сервер не принял токен.
+           */
           console.error(
-            'Îøèáêà ïåðåäà÷è òîêåíà â server.js:',
+            '❌ Не удалось передать токен в server.js:',
             error
           );
 
           document.body.innerHTML = `
-            <h2>VK àâòîðèçàöèÿ ïðîøëà ?</h2>
+            <h2>⚠️ VK авторизация прошла</h2>
+            <p>Но локальный автопостер не получил токен.</p>
             <p>
-              Íî ñåðâåð àâòîïîñòåðà íå ïîëó÷èë òîêåí.
+              Убедись, что server.js запущен
+              на 127.0.0.1:3000.
             </p>
             <p>
-              Óáåäèñü, ÷òî server.js çàïóùåí íà
-              <b>127.0.0.1:3000</b>.
-            </p>
-            <p>
-              Îøèáêà: ${error.message}
+              Ошибка: ${escapeHtml(error.message)}
             </p>
           `;
         }
       }
 
+      /*
+       * Ошибка VK ID.
+       */
       function vkidOnError(error) {
 
         console.error(
-          'VK ID ERROR:',
+          '❌ VK ID ERROR:',
           error
         );
 
         document.body.innerHTML = `
-          <h2>? Îøèáêà VK ID</h2>
-          <pre>${JSON.stringify(error, null, 2)}</pre>
+          <h2>❌ Ошибка VK ID</h2>
+          <pre>${escapeHtml(
+            JSON.stringify(error, null, 2)
+          )}</pre>
         `;
       }
 
-    } else {
+      /*
+       * Защита вывода текста ошибки в HTML.
+       */
+      function escapeHtml(value) {
 
-      document.body.innerHTML = `
-        <h2>? VK ID SDK íå çàãðóçèëñÿ</h2>
-        <p>
-          Ïðîâåðü ïîäêëþ÷åíèå ê èíòåðíåòó è áëîêèðîâùèêè.
-        </p>
-      `;
+        return String(value)
+          .replace(/&/g, '&amp;')
+          .replace(/</g, '&lt;')
+          .replace(/>/g, '&gt;')
+          .replace(/"/g, '&quot;')
+          .replace(/'/g, '&#039;');
+      }
     }
   </script>
 

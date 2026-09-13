@@ -3,14 +3,14 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>VK ID Авторизация</title>
+  <title>VK ID ГЂГўГІГ®Г°ГЁГ§Г Г¶ГЁГї</title>
 </head>
 
 <body>
 
   <div id="vk-auth"></div>
 
-  <script src="https://cdn.jsdelivr.net/npm/@vkid/sdk@2.6.6/dist-sdk/umd/index.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@vkid/sdk@2.6.8/dist-sdk/umd/index.js"></script>
 
   <script>
     if ('VKIDSDK' in window) {
@@ -44,8 +44,8 @@
           const code = payload.code;
           const deviceId = payload.device_id;
 
-          console.log('VK ID: получен code');
-          console.log('VK ID: получен device_id');
+          console.log('VK ID: ГЇГ®Г«ГіГ·ГҐГ­ code');
+          console.log('VK ID: ГЇГ®Г«ГіГ·ГҐГ­ device_id');
 
           VKID.Auth.exchangeCode(code, deviceId)
 
@@ -57,13 +57,13 @@
 
       async function vkidOnSuccess(data) {
 
-        console.log('VK ID: обмен code выполнен успешно');
+        console.log('VK ID: Г®ГЎГ¬ГҐГ­ code ГўГ»ГЇГ®Г«Г­ГҐГ­ ГіГ±ГЇГҐГёГ­Г®');
 
         if (!data || !data.access_token) {
 
           document.body.innerHTML = `
-            <h2>Ошибка ?</h2>
-            <p>VK ID не вернул access_token.</p>
+            <h2>ГЋГёГЁГЎГЄГ  ?</h2>
+            <p>VK ID Г­ГҐ ГўГҐГ°Г­ГіГ« access_token.</p>
           `;
 
           console.error('VK AUTH RESULT:', data);
@@ -96,45 +96,45 @@
           if (!response.ok || !result.success) {
 
             throw new Error(
-              result.message || 'server.js не принял токен'
+              result.message || 'server.js Г­ГҐ ГЇГ°ГЁГ­ГїГ« ГІГ®ГЄГҐГ­'
             );
           }
 
           document.body.innerHTML = `
-            <h2>? VK авторизация успешна</h2>
+            <h2>? VK Г ГўГІГ®Г°ГЁГ§Г Г¶ГЁГї ГіГ±ГЇГҐГёГ­Г </h2>
             <p>
-              Токен передан автопостеру.
+              Г’Г®ГЄГҐГ­ ГЇГҐГ°ГҐГ¤Г Г­ Г ГўГІГ®ГЇГ®Г±ГІГҐГ°Гі.
             </p>
             <p>
-              User ID: ${result.user_id || 'не указан'}
+              User ID: ${result.user_id || 'Г­ГҐ ГіГЄГ Г§Г Г­'}
             </p>
             <p>
-              Теперь эту вкладку можно закрыть.
+              Г’ГҐГЇГҐГ°Гј ГЅГІГі ГўГЄГ«Г Г¤ГЄГі Г¬Г®Г¦Г­Г® Г§Г ГЄГ°Г»ГІГј.
             </p>
           `;
 
           console.log(
-            '? VK токен успешно передан в server.js'
+            '? VK ГІГ®ГЄГҐГ­ ГіГ±ГЇГҐГёГ­Г® ГЇГҐГ°ГҐГ¤Г Г­ Гў server.js'
           );
 
         } catch (error) {
 
           console.error(
-            'Ошибка передачи токена в server.js:',
+            'ГЋГёГЁГЎГЄГ  ГЇГҐГ°ГҐГ¤Г Г·ГЁ ГІГ®ГЄГҐГ­Г  Гў server.js:',
             error
           );
 
           document.body.innerHTML = `
-            <h2>VK авторизация прошла ?</h2>
+            <h2>VK Г ГўГІГ®Г°ГЁГ§Г Г¶ГЁГї ГЇГ°Г®ГёГ«Г  ?</h2>
             <p>
-              Но сервер автопостера не получил токен.
+              ГЌГ® Г±ГҐГ°ГўГҐГ° Г ГўГІГ®ГЇГ®Г±ГІГҐГ°Г  Г­ГҐ ГЇГ®Г«ГіГ·ГЁГ« ГІГ®ГЄГҐГ­.
             </p>
             <p>
-              Убедись, что server.js запущен на
+              Г“ГЎГҐГ¤ГЁГ±Гј, Г·ГІГ® server.js Г§Г ГЇГіГ№ГҐГ­ Г­Г 
               <b>127.0.0.1:3000</b>.
             </p>
             <p>
-              Ошибка: ${error.message}
+              ГЋГёГЁГЎГЄГ : ${error.message}
             </p>
           `;
         }
@@ -148,7 +148,7 @@
         );
 
         document.body.innerHTML = `
-          <h2>? Ошибка VK ID</h2>
+          <h2>? ГЋГёГЁГЎГЄГ  VK ID</h2>
           <pre>${JSON.stringify(error, null, 2)}</pre>
         `;
       }
@@ -156,9 +156,9 @@
     } else {
 
       document.body.innerHTML = `
-        <h2>? VK ID SDK не загрузился</h2>
+        <h2>? VK ID SDK Г­ГҐ Г§Г ГЈГ°ГіГ§ГЁГ«Г±Гї</h2>
         <p>
-          Проверь подключение к интернету и блокировщики.
+          ГЏГ°Г®ГўГҐГ°Гј ГЇГ®Г¤ГЄГ«ГѕГ·ГҐГ­ГЁГҐ ГЄ ГЁГ­ГІГҐГ°Г­ГҐГІГі ГЁ ГЎГ«Г®ГЄГЁГ°Г®ГўГ№ГЁГЄГЁ.
         </p>
       `;
     }

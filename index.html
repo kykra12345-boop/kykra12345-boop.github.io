@@ -14,17 +14,19 @@
 
   <script>
     if (!('VKIDSDK' in window)) {
+
       document.body.innerHTML = `
         <h2>❌ VK ID SDK не загрузился</h2>
         <p>Проверь подключение к интернету или блокировщик.</p>
       `;
+
     } else {
 
       const VKID = window.VKIDSDK;
 
       /*
-       * ВАЖНО:
-       * Эти значения нужны VK ID для OAuth 2.1 / PKCE.
+       * Уникальные параметры текущей OAuth-сессии.
+       * SDK сохраняет их и использует при exchangeCode().
        */
       const state = crypto.randomUUID();
 
@@ -33,20 +35,15 @@
         crypto.randomUUID() +
         crypto.randomUUID();
 
-      /*
-       * Инициализация VK ID.
-       */
       VKID.Config.init({
         app: 54769424,
         redirectUrl: 'https://kykra12345-boop.github.io/',
+        responseMode: VKID.ConfigResponseMode.Callback,
         state: state,
         codeVerifier: codeVerifier,
         scope: 'wall groups',
       });
 
-      /*
-       * Кнопка OneTap.
-       */
       const oneTap = new VKID.OneTap();
 
       oneTap
@@ -70,27 +67,16 @@
             console.log('VK ID: получен authorization code');
             console.log('VK ID: получен device_id');
 
-            /*
-             * Обмениваем code на access_token.
-             * SDK использует сохранённый codeVerifier.
-             */
             VKID.Auth.exchangeCode(code, deviceId)
               .then(vkidOnSuccess)
               .catch(vkidOnError);
           }
         );
 
-      /*
-       * Успешная авторизация.
-       */
       async function vkidOnSuccess(data) {
 
         console.log('VK ID: exchangeCode выполнен успешно');
-        console.log('VK ID: User ID:', data.user_id);
 
-        /*
-         * Проверяем, что access_token действительно пришёл.
-         */
         if (!data || !data.access_token) {
 
           document.body.innerHTML = `
@@ -104,9 +90,7 @@
         }
 
         /*
-         * Отправляем токен нашему локальному server.js.
-         *
-         * Сам токен на странице НЕ показываем.
+         * Передаём токен локальному server.js.
          */
         try {
 
@@ -130,22 +114,16 @@
 
           const result = await response.json();
 
-          /*
-           * Проверяем, принял ли токен server.js.
-           */
           if (!response.ok || !result.success) {
             throw new Error(
               result.message || 'server.js не принял токен'
             );
           }
 
-          /*
-           * Всё успешно.
-           */
           document.body.innerHTML = `
             <h2>✅ Авторизация успешна</h2>
             <p>VK ID авторизовал аккаунт.</p>
-            <p>Токен автоматически передан автопостеру.</p>
+            <p>Токен передан автопостеру.</p>
             <p>User ID: ${result.user_id || 'не указан'}</p>
             <p>Теперь эту вкладку можно закрыть.</p>
           `;
@@ -156,10 +134,6 @@
 
         } catch (error) {
 
-          /*
-           * VK авторизация прошла,
-           * но локальный сервер не принял токен.
-           */
           console.error(
             '❌ Не удалось передать токен в server.js:',
             error
@@ -179,9 +153,6 @@
         }
       }
 
-      /*
-       * Ошибка VK ID.
-       */
       function vkidOnError(error) {
 
         console.error(
@@ -197,9 +168,6 @@
         `;
       }
 
-      /*
-       * Защита вывода текста ошибки в HTML.
-       */
       function escapeHtml(value) {
 
         return String(value)

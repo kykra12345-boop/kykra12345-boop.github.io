@@ -1,0 +1,168 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>VK ID Авторизация</title>
+</head>
+
+<body>
+
+  <div id="vk-auth"></div>
+
+  <script src="https://cdn.jsdelivr.net/npm/@vkid/sdk@2.6.6/dist-sdk/umd/index.js"></script>
+
+  <script>
+    if ('VKIDSDK' in window) {
+
+      const VKID = window.VKIDSDK;
+
+      VKID.Config.init({
+        app: 54769424,
+        redirectUrl: 'https://kykra12345-boop.github.io/',
+        responseMode: VKID.ConfigResponseMode.Callback,
+        source: VKID.ConfigSource.LOWCODE,
+        scope: 'wall groups',
+      });
+
+      const oneTap = new VKID.OneTap();
+
+      oneTap.render({
+        container: document.getElementById('vk-auth'),
+        showAlternativeLogin: true
+      })
+
+      .on(
+        VKID.WidgetEvents.ERROR,
+        vkidOnError
+      )
+
+      .on(
+        VKID.OneTapInternalEvents.LOGIN_SUCCESS,
+        function (payload) {
+
+          const code = payload.code;
+          const deviceId = payload.device_id;
+
+          console.log('VK ID: получен code');
+          console.log('VK ID: получен device_id');
+
+          VKID.Auth.exchangeCode(code, deviceId)
+
+            .then(vkidOnSuccess)
+
+            .catch(vkidOnError);
+        }
+      );
+
+      async function vkidOnSuccess(data) {
+
+        console.log('VK ID: обмен code выполнен успешно');
+
+        if (!data || !data.access_token) {
+
+          document.body.innerHTML = `
+            <h2>Ошибка ?</h2>
+            <p>VK ID не вернул access_token.</p>
+          `;
+
+          console.error('VK AUTH RESULT:', data);
+
+          return;
+        }
+
+        try {
+
+          const response = await fetch(
+            'http://127.0.0.1:3000/vk-token',
+            {
+              method: 'POST',
+
+              headers: {
+                'Content-Type': 'application/json'
+              },
+
+              body: JSON.stringify({
+                access_token: data.access_token,
+                refresh_token: data.refresh_token || '',
+                user_id: data.user_id || null,
+                device_id: data.device_id || ''
+              })
+            }
+          );
+
+          const result = await response.json();
+
+          if (!response.ok || !result.success) {
+
+            throw new Error(
+              result.message || 'server.js не принял токен'
+            );
+          }
+
+          document.body.innerHTML = `
+            <h2>? VK авторизация успешна</h2>
+            <p>
+              Токен передан автопостеру.
+            </p>
+            <p>
+              User ID: ${result.user_id || 'не указан'}
+            </p>
+            <p>
+              Теперь эту вкладку можно закрыть.
+            </p>
+          `;
+
+          console.log(
+            '? VK токен успешно передан в server.js'
+          );
+
+        } catch (error) {
+
+          console.error(
+            'Ошибка передачи токена в server.js:',
+            error
+          );
+
+          document.body.innerHTML = `
+            <h2>VK авторизация прошла ?</h2>
+            <p>
+              Но сервер автопостера не получил токен.
+            </p>
+            <p>
+              Убедись, что server.js запущен на
+              <b>127.0.0.1:3000</b>.
+            </p>
+            <p>
+              Ошибка: ${error.message}
+            </p>
+          `;
+        }
+      }
+
+      function vkidOnError(error) {
+
+        console.error(
+          'VK ID ERROR:',
+          error
+        );
+
+        document.body.innerHTML = `
+          <h2>? Ошибка VK ID</h2>
+          <pre>${JSON.stringify(error, null, 2)}</pre>
+        `;
+      }
+
+    } else {
+
+      document.body.innerHTML = `
+        <h2>? VK ID SDK не загрузился</h2>
+        <p>
+          Проверь подключение к интернету и блокировщики.
+        </p>
+      `;
+    }
+  </script>
+
+</body>
+</html>

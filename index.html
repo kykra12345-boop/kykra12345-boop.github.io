@@ -6,11 +6,11 @@
       const VKID = window.VKIDSDK;
 
       VKID.Config.init({
-        app: 54769332,
-        redirectUrl: 'https://oauth.vk.com/blank.html',
+        app: 54769424,
+        redirectUrl: 'https://kykra12345-boop.github.io/',
         responseMode: VKID.ConfigResponseMode.Callback,
         source: VKID.ConfigSource.LOWCODE,
-        scope: '',
+        scope: 'wall groups',
       });
 
       const oneTap = new VKID.OneTap();
@@ -21,7 +21,6 @@
       })
       .on(VKID.WidgetEvents.ERROR, vkidOnError)
       .on(VKID.OneTapInternalEvents.LOGIN_SUCCESS, function (payload) {
-
         const code = payload.code;
         const deviceId = payload.device_id;
 
@@ -36,19 +35,21 @@
       function vkidOnSuccess(data) {
         console.log('VK AUTH RESULT:', data);
 
-        alert(
-          'Авторизация прошла!\n\n' +
-          JSON.stringify(data, null, 2)
-        );
+        document.body.innerHTML =
+          '<h2>Авторизация прошла</h2>' +
+          '<p>Данные получены. Токен не показываем на странице.</p>';
+
+        console.log('ACCESS TOKEN:', data.access_token);
+        console.log('REFRESH TOKEN:', data.refresh_token);
+        console.log('USER ID:', data.user_id);
       }
 
       function vkidOnError(error) {
         console.error('VK AUTH ERROR:', error);
 
-        alert(
-          'Ошибка авторизации:\n\n' +
-          JSON.stringify(error, null, 2)
-        );
+        document.body.innerHTML =
+          '<h2>Ошибка авторизации</h2>' +
+          '<pre>' + JSON.stringify(error, null, 2) + '</pre>';
       }
     }
   </script>
